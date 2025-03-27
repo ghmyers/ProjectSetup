@@ -17,7 +17,6 @@ import logging
 import os
 
 def setup_logging(log_dir="logs", log_filename="project.log"):
-    """Sets up logging where everything is logged in a single `project.log` file."""
 
     # Dynamically determine the project root
     try:
@@ -69,7 +68,7 @@ def run_script(script, args=None):
 
 def write_logging_script(project_path):
     """Writes logging_setup.py to src/utils/ inside the new project."""
-    src_utils_path = os.path.join(project_path, "src", "utils")
+    src_utils_path = os.path.join(project_path, "src")
     os.makedirs(src_utils_path, exist_ok=True)
 
     logging_file_path = os.path.join(src_utils_path, "logging_setup.py")

@@ -16,15 +16,18 @@ import os
 import sys
 
 # Get project directory dynamically
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "../.."))
+PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.chdir(PROJECT_DIR)
 
 # Ensure PROJECT_DIR is in sys.path for imports
 if PROJECT_DIR not in sys.path:
     sys.path.insert(0, PROJECT_DIR)
 
+# Append src/ to Python's module search path
+sys.path.append(os.path.join(PROJECT_DIR, "src"))
+
 # Import logging
-from src.utils.logging_setup import setup_logging
+from logging_setup import setup_logging
 logger = setup_logging(log_dir="logs", log_filename=)
 logger.info(f"Module initialized: {{os.path.basename(__file__)}}")
 

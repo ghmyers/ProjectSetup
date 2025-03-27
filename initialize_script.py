@@ -24,12 +24,15 @@ os.chdir(PROJECT_DIR)
 if PROJECT_DIR not in sys.path:
     sys.path.insert(0, PROJECT_DIR)
 
+# Append src/ to Python's module search path
+sys.path.append(os.path.join(PROJECT_DIR, "src"))
+
 # Define subdirectories
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
 FIGURE_DIR = os.path.join(PROJECT_DIR, 'outputs', 'figures')
 
 # Import logging
-from src.utils.logging_setup import setup_logging
+from logging_setup import setup_logging
 logger = setup_logging(log_dir="logs", log_filename=)
 logger.info(f"Script initialized: {{os.path.basename(__file__)}}")
 
@@ -52,8 +55,12 @@ DATA_DIR = os.path.join(PROJECT_DIR, 'data')
 FIGURE_DIR = os.path.join(PROJECT_DIR, 'outputs', 'figures')
 os.chdir(PROJECT_DIR)
 
+# Append src/ to Python's module search path
+sys.path.append(os.path.join(PROJECT_DIR, "src"))
+
+
 # Setup logging
-from src.utils.logging_setup import setup_logging
+from logging_setup import setup_logging
 logger = setup_logging(log_dir="logs", log_filename=)
 logger.info("Notebook initialized")
 

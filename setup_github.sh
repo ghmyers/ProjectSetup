@@ -9,7 +9,7 @@ fi
 
 PROJECT_NAME=$1
 PROJECT_PATH=$2
-GITHUB_USERNAME="finnmyers96"  # Replace with your GitHub username
+GITHUB_USERNAME="ghmyers"  # Replace with your GitHub username
 GITHUB_REPO_URL="https://github.com/$GITHUB_USERNAME/$PROJECT_NAME.git"
 
 # Navigate to project directory

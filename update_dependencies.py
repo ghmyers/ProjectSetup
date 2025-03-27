@@ -6,10 +6,8 @@ import yaml
 
 def detect_pip_dependencies(project_dir):
     """Extract installed pip dependencies and update config/requirements.txt."""
-    config_dir = os.path.join(project_dir, "config")
-    os.makedirs(config_dir, exist_ok=True)  # Ensure config directory exists
 
-    requirements_path = os.path.join(config_dir, "requirements.txt")
+    requirements_path = os.path.join(project_dir, "requirements.txt")
     try:
         output = subprocess.check_output([sys.executable, "-m", "pip", "freeze"], text=True)
         with open(requirements_path, "w") as f:
@@ -19,11 +17,9 @@ def detect_pip_dependencies(project_dir):
         print(f"❌ Error updating {requirements_path}: {e}")
 
 def detect_conda_dependencies(project_dir):
-    """Extract installed Conda dependencies and update config/environment.yml."""
-    config_dir = os.path.join(project_dir, "config")
-    os.makedirs(config_dir, exist_ok=True)  # Ensure config directory exists
+    """Extract installed Conda dependencies and update environment.yml."""
 
-    env_path = os.path.join(config_dir, "environment.yml")
+    env_path = os.path.join(project_dir, "environment.yml")
     try:
         output = subprocess.check_output(["conda", "env", "export"], text=True)
         env_data = yaml.safe_load(output)
