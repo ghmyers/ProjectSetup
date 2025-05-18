@@ -49,20 +49,35 @@ if __name__ == "__main__":
 
 """
 
-def run_script(script, args=None):
-    """Executes a script (Python or Bash) with optional arguments."""
+# def run_script(script, args=None):
+#     """Executes a script (Python or Bash) with optional arguments."""
+#     try:
+#         if script.endswith(".py"):
+#             cmd = ["python3", script] + (args if args else [])
+#         elif script.endswith(".sh"):
+#             cmd = ["bash", script] + (args if args else [])
+#         else:
+#             print(f"⚠️ Unsupported script format: {script}")
+#             return
+
+#         subprocess.run(cmd, check=True)
+#         print(f"✅ Successfully ran {script}")
+def run_script(script, args=None, *, cwd=None):
+    """Execute a Python or Bash script with optional args and working dir."""
     try:
         if script.endswith(".py"):
-            cmd = ["python3", script] + (args if args else [])
+            cmd = ["python3", script]
         elif script.endswith(".sh"):
-            cmd = ["bash", script] + (args if args else [])
+            cmd = ["bash", script]
         else:
             print(f"⚠️ Unsupported script format: {script}")
             return
+        cmd += args or []
 
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True, cwd=cwd)   # <-- key change
+        
         print(f"✅ Successfully ran {script}")
-
+        
     except subprocess.CalledProcessError as e:
         print(f"❌ Error running {script}: {e}")
 
@@ -96,7 +111,12 @@ def setup_project(project_name):
     run_script(GENERATE_DEPENDENCIES_SCRIPT, [config_path])
 
     # Step 3: Initialize GitHub repository (Pass Absolute Project Path)
-    run_script(GIT_SETUP_SCRIPT, [project_name, project_path])
+    # run_script(GIT_SETUP_SCRIPT, [project_name, project_path])
+    run_script(
+    GIT_SETUP_SCRIPT,
+    ["Initial project scaffold", "main"],      # commit msg, branch
+    cwd=project_path                           # <-- must be inside repo
+    )
 
     # Step 4: Set up logging inside src/utils/
     write_logging_script(project_path)

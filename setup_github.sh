@@ -10,6 +10,24 @@ if ! git rev-parse --is-inside-work-tree &>/dev/null; then
   echo "❌  Not a Git repository."
   exit 1
 fi
+# If no remote called "origin" exists yet, create one that points to GitHub
+GITHUB_USER="ghmyers"                    
+REPO_NAME="${PWD##*/}"                    # directory name → repo name
+REMOTE_URL="git@github.com:${GITHUB_USER}/${REPO_NAME}.git"
+
+
+
+if ! git remote | grep -q '^origin$'; then
+  git remote add origin "$REMOTE_URL"
+  echo "🔗  Added remote 'origin' → $REMOTE_URL"
+fi
+
+# Create github repository
+if ! gh repo view "${GITHUB_USER}/${REPO_NAME}" &>/dev/null; then
+  echo "🌐  Creating repository ${GITHUB_USER}/${REPO_NAME} on GitHub…"
+  gh repo create "${GITHUB_USER}/${REPO_NAME}" --private --confirm
+fi
+
 
 # 1. Parse arguments
 if [[ $# -lt 1 ]]; then
@@ -20,25 +38,31 @@ COMMIT_MSG="$1"
 BRANCH="${2:-main}"
 
 # 2. Create branch if needed and switch to it
-# git switch --create "$BRANCH" 2>/dev/null || git switch "$BRANCH"
-# 2. Create branch if needed and switch to it
 if git rev-parse --verify HEAD >/dev/null 2>&1; then
-    # Repo already has a commit → normal flow
-    git switch --create "$BRANCH" 2>/dev/null || git switch "$BRANCH"
+  # Repo already has at least one commit
+  git switch --create "$BRANCH" 2>/dev/null || git switch "$BRANCH"
 else
-    # No commits yet → create an ORPHAN branch
-    git switch --orphan "$BRANCH"
+  # Unborn HEAD – make an orphan branch
+  git switch --orphan "$BRANCH"
 fi
 
 
 # 3. OPTIONAL safety net: timestamped backup ref (cheap, 0 bytes on disk)
-BACKUP_REF="backup/$BRANCH-$(date +%Y%m%d-%H%M%S)"
-git branch "$BACKUP_REF" >/dev/null
-echo "📦  Backup ref created at $BACKUP_REF"
+if git rev-parse --verify HEAD >/dev/null 2>&1; then
+  BACKUP_REF="backup/$BRANCH-$(date +%Y%m%d-%H%M%S)"
+  git branch "$BACKUP_REF" >/dev/null
+  echo "📦  Backup ref created at $BACKUP_REF"
+fi
 
 # 4. Stage **everything**, but commit only if there are changes
-if ! git diff --quiet --ignore-submodules --
-then
+# if ! git diff --quiet --ignore-submodules --
+# then
+#   git add -A
+#   git commit -m "$COMMIT_MSG"
+# else
+#   echo "ℹ️  No changes to commit."
+# fi
+if [ -n "$(git status --porcelain)" ]; then
   git add -A
   git commit -m "$COMMIT_MSG"
 else
