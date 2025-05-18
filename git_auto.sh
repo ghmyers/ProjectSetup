@@ -1,38 +1,43 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
+##############################################################################
+# git_auto.sh – stage → commit → push  (local history is source-of-truth)
+# Usage examples
+#   git_auto "Bug-fix: handle NaNs"          # current branch
+#   git_auto Quick hotfix main               # msg = "Quick hotfix", branch = main
+##############################################################################
 
-# Ensure script is run inside a Git repo
-if [ ! -d .git ]; then
-    echo "❌ Error: This is not a Git repository!"
-    exit 1
+# 0. safety check ------------------------------------------------------------
+git rev-parse --is-inside-work-tree &>/dev/null ||
+  { echo "❌  Not a Git repository"; exit 1; }
+
+[[ $# -lt 1 ]] && {
+  echo "Usage: $0 \"Commit message\" [branch]"; exit 1; }
+
+# 1.  parse CLI ----------------------------------------------------------------
+if [[ $# -eq 1 ]]; then                    # only a message was given
+  COMMIT_MSG="$1"
+  BRANCH="$(git symbolic-ref --quiet --short HEAD)"
+else                                        # last arg = branch, rest = message
+  BRANCH="${@: -1}"                        # bash: last positional parameter
+  COMMIT_MSG="${*:1:$#-1}"                 # all but the last
 fi
 
-# Ensure commit message is provided
-if [ -z "$1" ]; then
-    echo "❌ Error: Please provide a commit message."
-    echo "Usage: ./git_auto.sh \"Your commit message\" [branch_name]"
-    exit 1
-fi
+# 2.  switch / create branch ---------------------------------------------------
+git switch --create "$BRANCH" 2>/dev/null || git switch "$BRANCH"
 
-# Capture the full commit message (all arguments except the last one if a branch is provided)
-if [ -n "$2" ]; then
-    BRANCH_NAME="${@: -1}"  # Last argument is the branch name
-    COMMIT_MESSAGE="${@:1:$#-1}"  # All but the last argument is the commit message
+# 3.  safety ref (lightweight) -------------------------------------------------
+git branch "backup/$BRANCH-$(date +%Y%m%d-%H%M%S)" >/dev/null
+
+# 4.  stage & commit -----------------------------------------------------------
+git add -A
+git commit --allow-empty -m "$COMMIT_MSG"
+
+# 5.  push local → remote (never pull) ----------------------------------------
+if git ls-remote --exit-code --heads origin "$BRANCH" &>/dev/null; then
+  git push --force-with-lease origin "$BRANCH"
 else
-    BRANCH_NAME="main"
-    COMMIT_MESSAGE="$1"
+  git push -u origin "$BRANCH"
 fi
 
-# Ensure the branch exists or create it
-if git show-ref --verify --quiet "refs/heads/$BRANCH_NAME"; then
-    git checkout "$BRANCH_NAME"
-else
-    git checkout -b "$BRANCH_NAME"
-fi
-
-# Add all changes, commit, and push
-git add .
-git commit -m "$COMMIT_MESSAGE"
-git push origin "$BRANCH_NAME"
-
-echo "✅ Changes pushed to GitHub on branch: $BRANCH_NAME"
-
+echo "✅  '$COMMIT_MSG' pushed to origin/$BRANCH"

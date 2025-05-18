@@ -1,50 +1,62 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Ensure a project name and path are provided
-if [ -z "$1" ] || [ -z "$2" ]; then
-    echo "❌ Error: Please provide a GitHub repository name and project path."
-    echo "Usage: ./setup_github.sh <repo_name> <project_path>"
-    exit 1
+########################################
+# Usage: ./git_auto.sh "Commit message" [branch]
+########################################
+
+# 0. Verify we’re inside a repo
+if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+  echo "❌  Not a Git repository."
+  exit 1
 fi
 
-PROJECT_NAME=$1
-PROJECT_PATH=$2
-GITHUB_USERNAME="ghmyers"  # Replace with your GitHub username
-GITHUB_REPO_URL="https://github.com/$GITHUB_USERNAME/$PROJECT_NAME.git"
+# 1. Parse arguments
+if [[ $# -lt 1 ]]; then
+  echo "Usage: $0 \"Commit message\" [branch]"
+  exit 1
+fi
+COMMIT_MSG="$1"
+BRANCH="${2:-main}"
 
-# Navigate to project directory
-cd "$PROJECT_PATH" || { echo "❌ Error: Project directory does not exist at $PROJECT_PATH."; exit 1; }
-
-# Ensure GitHub CLI is authenticated
-if ! gh auth status &>/dev/null; then
-    echo "❌ GitHub CLI is not authenticated. Run 'gh auth login' and try again."
-    exit 1
+# 2. Create branch if needed and switch to it
+# git switch --create "$BRANCH" 2>/dev/null || git switch "$BRANCH"
+# 2. Create branch if needed and switch to it
+if git rev-parse --verify HEAD >/dev/null 2>&1; then
+    # Repo already has a commit → normal flow
+    git switch --create "$BRANCH" 2>/dev/null || git switch "$BRANCH"
+else
+    # No commits yet → create an ORPHAN branch
+    git switch --orphan "$BRANCH"
 fi
 
-# Create GitHub repository (if not already created)
-echo "🚀 Creating new GitHub repository: $PROJECT_NAME"
-gh repo create "$PROJECT_NAME" --private --confirm
 
-# Initialize Git (if not already initialized)
-if [ ! -d ".git" ]; then
-    git init
+# 3. OPTIONAL safety net: timestamped backup ref (cheap, 0 bytes on disk)
+BACKUP_REF="backup/$BRANCH-$(date +%Y%m%d-%H%M%S)"
+git branch "$BACKUP_REF" >/dev/null
+echo "📦  Backup ref created at $BACKUP_REF"
+
+# 4. Stage **everything**, but commit only if there are changes
+if ! git diff --quiet --ignore-submodules --
+then
+  git add -A
+  git commit -m "$COMMIT_MSG"
+else
+  echo "ℹ️  No changes to commit."
 fi
 
-# Ensure the correct remote is set
-if git remote | grep -q origin; then
-    echo "⚠️ Remote 'origin' already exists. Resetting it..."
-    git remote remove origin
+# 5. If the branch exists on the server, pull--rebase; otherwise skip
+if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null; then
+    git pull --rebase --autostash origin "$BRANCH"
+else
+    echo "ℹ️  Remote branch '$BRANCH' doesn't exist yet – skipping pull."
 fi
 
-git remote add origin "$GITHUB_REPO_URL"
+# 6. Push
+if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null; then
+    git push --ff-only origin "$BRANCH"        # fast-forward only
+else
+    git push -u origin "$BRANCH"               # creates remote branch & sets upstream
+fi
 
-# Add all files and commit
-git add .
-git commit -m "Initial commit"
-
-# Set branch to 'main' and push
-git branch -M main
-git push -u origin main
-
-echo "✅ GitHub repository created and pushed for $PROJECT_NAME"
-
+echo "✅  Push complete.  Local branch $BRANCH is up to date with origin/$BRANCH."
